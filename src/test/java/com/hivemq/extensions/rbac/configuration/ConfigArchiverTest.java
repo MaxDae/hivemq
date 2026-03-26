@@ -74,24 +74,18 @@ public class ConfigArchiverTest {
     }
 
     @Test
-    public void whenArchiveFolderIsFile_andDeletable_shouldNotThrow() throws IOException {
-        // Arrange — create the extension home folder
-        File extensionHomeFolder = temporaryFolder.newFolder("extension");
-
-        File credentialsArchiveAsFile = new File(extensionHomeFolder, "credentials-archive");
+    public void test_when_archive_folder_is_file_deletable_should_delete() throws IOException {
+        // Use the same 'folder' from @Before — NOT a new separate folder
+        File credentialsArchiveAsFile = new File(folder, "credentials-archive");
         assertTrue("Test setup failed — could not create file",
                 credentialsArchiveAsFile.createNewFile());
         assertTrue("File should exist before test",
                 credentialsArchiveAsFile.isFile());
 
-        XmlParser mockParser = mock(XmlParser.class);
-        ConfigArchiver archiver = new ConfigArchiver(extensionHomeFolder, mockParser);
-
         FileAuthConfig config = new FileAuthConfig();
 
         try {
-            archiver.archive(config);
-            // After fix we reach here ✅
+            configArchiver.archive(config);
         } catch (IOException e) {
             fail("Should not throw IOException when file is successfully deleted, but got: "
                     + e.getMessage());

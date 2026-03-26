@@ -65,7 +65,7 @@ public class ConfigArchiver {
         //If someone's nasty and creates a file that looks like a folder
         if (archiveFolder.isFile()) {
             log.warn("The credentials archive folder is a file, trying to delete");
-            if (archiveFolder.delete()) {
+            if (!archiveFolder.delete()) {
                 throw new IOException("Could not delete file " + archiveFolder.getAbsolutePath());
             }
         }
@@ -82,7 +82,7 @@ public class ConfigArchiver {
             }
         }
 
-        final FastDateFormat formatter = FastDateFormat.getInstance("yyyyMMdd-hh-mm-ss");
+        final FastDateFormat formatter = FastDateFormat.getInstance("yyyyMMdd-HH-mm-ss-SSS");
         try {
             final String dateString = formatter.format(new Date());
             final File file = new File(archiveFolder, dateString + "-credentials.xml");

@@ -65,7 +65,7 @@ public class ConfigArchiver {
         //If someone's nasty and creates a file that looks like a folder
         if (archiveFolder.isFile()) {
             log.warn("The credentials archive folder is a file, trying to delete");
-            if (archiveFolder.delete()) {
+            if (!archiveFolder.delete()) {
                 throw new IOException("Could not delete file " + archiveFolder.getAbsolutePath());
             }
         }

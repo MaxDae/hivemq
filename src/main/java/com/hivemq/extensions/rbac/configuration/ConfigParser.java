@@ -37,7 +37,7 @@ public class ConfigParser {
 
     public ConfigParser(final @NotNull ExtensionConfig extensionConfig) {
 
-            this.extensionConfig = extensionConfig;
+        this.extensionConfig = extensionConfig;
         this.xmlParser = new XmlParser();
 
     }

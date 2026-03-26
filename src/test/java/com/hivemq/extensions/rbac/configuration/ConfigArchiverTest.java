@@ -27,10 +27,11 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.MockitoAnnotations;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
+import static org.powermock.api.mockito.PowerMockito.mock;
 
 public class ConfigArchiverTest {
 
@@ -70,6 +71,31 @@ public class ConfigArchiverTest {
         assertTrue(archiveFolder.listFiles()[0].getName().startsWith("20"));
         assertTrue(archiveFolder.listFiles()[0].getName().endsWith("credentials.xml"));
 
+    }
+
+    @Test
+    public void whenArchiveFolderIsFile_andDeletable_shouldNotThrow() throws IOException {
+        // Arrange — create the extension home folder
+        File extensionHomeFolder = temporaryFolder.newFolder("extension");
+
+        File credentialsArchiveAsFile = new File(extensionHomeFolder, "credentials-archive");
+        assertTrue("Test setup failed — could not create file",
+                credentialsArchiveAsFile.createNewFile());
+        assertTrue("File should exist before test",
+                credentialsArchiveAsFile.isFile());
+
+        XmlParser mockParser = mock(XmlParser.class);
+        ConfigArchiver archiver = new ConfigArchiver(extensionHomeFolder, mockParser);
+
+        FileAuthConfig config = new FileAuthConfig();
+
+        try {
+            archiver.archive(config);
+            // After fix we reach here ✅
+        } catch (IOException e) {
+            fail("Should not throw IOException when file is successfully deleted, but got: "
+                    + e.getMessage());
+        }
     }
 
 }

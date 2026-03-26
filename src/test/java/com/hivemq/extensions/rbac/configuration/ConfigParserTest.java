@@ -25,11 +25,14 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 
 public class ConfigParserTest {
@@ -77,6 +80,18 @@ public class ConfigParserTest {
 
         assertNull(fileAuthConfig);
     }
+
+    @Test
+    public void tes_parsed_config_null() throws IOException {
+        XmlParser mockParser = mock(XmlParser.class);
+        File file = temporaryFolder.newFile("credentials.xml");
+
+        when(mockParser.unmarshalFileAuthConfig(file)).thenReturn(null);
+
+        ConfigParser parser = new ConfigParser(new ExtensionConfig(), mockParser);
+        assertNull(parser.read(file));
+    }
+
 
 
 }

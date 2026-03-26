@@ -117,7 +117,7 @@ public class ConfigArchiverTest {
     }
 
     @Test
-    public void test_archiving_2pm_filename_ShouldContain14Not02() throws Exception {
+    public void test_archiving_2pm_filename_should_contain_14_not_02() throws Exception {
         // Force new Date() inside ConfigArchiver to return 14:30:45
         whenNew(Date.class).withNoArguments().thenReturn(fixedDateAtHour(14));
 

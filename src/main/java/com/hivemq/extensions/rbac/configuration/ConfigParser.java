@@ -31,14 +31,25 @@ public class ConfigParser {
 
     private static final Logger log = LoggerFactory.getLogger(ConfigParser.class);
 
-    private final @NotNull XmlParser xmlParser = new XmlParser();
+    private final @NotNull XmlParser xmlParser;
     private final @NotNull
     ExtensionConfig extensionConfig;
 
     public ConfigParser(final @NotNull ExtensionConfig extensionConfig) {
 
-        this.extensionConfig = extensionConfig;
+            this.extensionConfig = extensionConfig;
+        this.xmlParser = new XmlParser();
+
     }
+
+    public ConfigParser(final @NotNull ExtensionConfig extensionConfig, XmlParser xmlParser) {
+
+        this.extensionConfig = extensionConfig;
+        this.xmlParser = xmlParser;
+
+    }
+
+
 
     /**
      * @param file the new config file to read.
@@ -54,6 +65,10 @@ public class ConfigParser {
 
         try {
             final FileAuthConfig config = xmlParser.unmarshalFileAuthConfig(file);
+            if (config == null) {
+                log.error("Parsed config was null for file {}", file.getAbsolutePath());
+                return null;
+            }
 
             final ConfigCredentialsValidator.ValidationResult validationResult = ConfigCredentialsValidator.validateConfig(extensionConfig, config);
             if (validationResult.isValidationSuccessful()) {

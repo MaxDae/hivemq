@@ -20,6 +20,7 @@ package com.hivemq.extensions.rbac.configuration;
 import com.hivemq.extensions.rbac.configuration.ConfigCredentialsValidator.ValidationResult;
 import com.hivemq.extensions.rbac.configuration.entities.*;
 import com.hivemq.extension.sdk.api.annotations.NotNull;
+import jdk.jfr.Description;
 import org.junit.Test;
 
 import java.util.List;
@@ -459,8 +460,62 @@ public class ConfigCredentialsValidatorTest {
         checkErrorString(result, "Unknown role '2' for user 'user1'");
     }
 
+    @Test
+    public void test_password_has_two_parts_should_fail() {
+        final ExtensionConfig extensionConfig = new ExtensionConfig();
+        extensionConfig.setPasswordType(PasswordType.HASHED);
 
-    private void checkErrorString(final ValidationResult result, final @NotNull String s) {
+        FileAuthConfig config = new FileAuthConfig();
+        config.setRoles(List.of(new Role("role1", List.of(new Permission("topic")))));
+
+        config.setUsers(List.of(
+                new User("bob", "c29tZXNhbHQ=:100",  List.of("role1"))
+        ));
+
+        ValidationResult result = ConfigCredentialsValidator.validateConfig(extensionConfig, config);
+        assertFalse("2-part password should fail", result.isValidationSuccessful());
+    }
+
+    @Test
+    public void test_password_has_negative_iterations() {
+        final ExtensionConfig extensionConfig = new ExtensionConfig();
+        extensionConfig.setPasswordType(PasswordType.HASHED);
+
+        FileAuthConfig config = new FileAuthConfig();
+        config.setRoles(List.of(new Role("role1", List.of(new Permission("topic")))));
+
+        config.setUsers(List.of(
+                new User("bob", "c29tZXNhbHQ=:-10:aGFzaA==", List.of("role1"))
+        ));
+
+        ValidationResult result = ConfigCredentialsValidator.validateConfig(extensionConfig, config);
+
+        assertFalse("Negative iterations should fail", result.isValidationSuccessful());
+    }
+
+    @Test
+    public void test_password_has_non_numeric_iterations() {
+        final ExtensionConfig extensionConfig = new ExtensionConfig();
+        extensionConfig.setPasswordType(PasswordType.HASHED);
+
+        FileAuthConfig config = new FileAuthConfig();
+        config.setRoles(List.of(new Role("role1", List.of(new Permission("topic")))));
+
+        config.setUsers(List.of(
+                new User("bob", "c29tZXNhbHQ=:bob:aGFzaA==", List.of("role1"))
+        ));
+
+        ValidationResult result = ConfigCredentialsValidator.validateConfig(extensionConfig, config);
+
+        assertFalse("Non-numeric iterations should fail", result.isValidationSuccessful());
+    }
+
+
+
+
+
+
+        private void checkErrorString(final ValidationResult result, final @NotNull String s) {
         assertTrue("Wanted error reason \"" + s + "\" not contained in: " + result.getErrors().toString(),
                 result.getErrors().contains(s));
     }

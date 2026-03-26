@@ -1,0 +1,74 @@
+# ---------------------
+# Build outputs
+# ---------------------
+/target/
+**/target/
+
+# ---------------------
+# Compiled class files
+# ---------------------
+*.class
+
+# ---------------------
+# Package files
+# ---------------------
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# ---------------------
+# Maven specific
+# ---------------------
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ---------------------
+# Test outputs
+# ---------------------
+/test-output/
+**/surefire-reports/
+**/failsafe-reports/
+*.exec
+
+# ---------------------
+# IDE - IntelliJ IDEA
+# ---------------------
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+
+# ---------------------
+# OS files
+# ---------------------
+.DS_Store
+Thumbs.db
+
+# ---------------------
+# Environment / Secrets
+# ---------------------
+.env
+.env.local
+
+# ---------------------
+# Logs
+# ---------------------
+*.log
+logs/
+
+# ---------------------
+# JVM crash logs
+# ---------------------
+hs_err_pid*
+replay_pid*

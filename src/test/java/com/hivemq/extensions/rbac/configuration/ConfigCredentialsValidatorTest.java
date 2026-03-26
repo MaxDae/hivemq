@@ -24,8 +24,7 @@ import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 
 public class ConfigCredentialsValidatorTest {
@@ -37,7 +36,7 @@ public class ConfigCredentialsValidatorTest {
         config.setRoles(null);
         config.setUsers(List.of(new User("a", "b", List.of("1"))));
 
-        final ExtensionConfig extensionConfig = new ExtensionConfig();
+        ExtensionConfig extensionConfig = new ExtensionConfig();
         final ValidationResult result = ConfigCredentialsValidator.validateConfig(extensionConfig, config);
 
         assertFalse(result.isValidationSuccessful());
@@ -459,10 +458,8 @@ public class ConfigCredentialsValidatorTest {
         checkErrorString(result, "Unknown role '2' for user 'user1'");
     }
 
-
     private void checkErrorString(final ValidationResult result, final @NotNull String s) {
         assertTrue("Wanted error reason \"" + s + "\" not contained in: " + result.getErrors().toString(),
                 result.getErrors().contains(s));
     }
-
 }

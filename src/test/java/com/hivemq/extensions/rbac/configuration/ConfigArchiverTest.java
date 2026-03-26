@@ -24,15 +24,23 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import static org.junit.Assert.*;
 import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.whenNew;
 
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(ConfigArchiver.class)
 public class ConfigArchiverTest {
 
     @Rule
@@ -49,6 +57,22 @@ public class ConfigArchiverTest {
 
         configArchiver = new ConfigArchiver(folder, new XmlParser());
     }
+
+    private FileAuthConfig validConfig() {
+        FileAuthConfig config = new FileAuthConfig();
+        config.setRoles(List.of(new Role("id1", List.of(new Permission("topic1")))));
+        return config;
+    }
+
+
+    private Date fixedDateAtHour(int hour) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, hour);
+        calendar.set(Calendar.MINUTE, 30);
+        calendar.set(Calendar.SECOND, 45);
+        return calendar.getTime();
+    }
+
 
     @Test
     public void test_archive() throws Exception {
@@ -92,4 +116,24 @@ public class ConfigArchiverTest {
         }
     }
 
+    @Test
+    public void test_archiving_2pm_filename_ShouldContain14Not02() throws Exception {
+        // Force new Date() inside ConfigArchiver to return 14:30:45
+        whenNew(Date.class).withNoArguments().thenReturn(fixedDateAtHour(14));
+
+        configArchiver.archive(validConfig());
+
+        File archiveFolder = new File(folder, "credentials-archive");
+        String filename = archiveFolder.listFiles()[0].getName();
+        System.out.println("Generated filename: " + filename);
+
+        assertTrue(
+                "Filename should contain '14' for 2PM, but was: " + filename,
+                filename.contains("-14-")
+        );
+        assertFalse(
+                "Filename should NOT contain '02' (12-hour) for 2PM, but was: " + filename,
+                filename.contains("-02-")
+        );
+    }
 }

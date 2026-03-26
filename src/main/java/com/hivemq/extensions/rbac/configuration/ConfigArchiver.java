@@ -82,7 +82,7 @@ public class ConfigArchiver {
             }
         }
 
-        final FastDateFormat formatter = FastDateFormat.getInstance("yyyyMMdd-hh-mm-ss");
+        final FastDateFormat formatter = FastDateFormat.getInstance("yyyyMMdd-HH-mm-ss");
         try {
             final String dateString = formatter.format(new Date());
             final File file = new File(archiveFolder, dateString + "-credentials.xml");

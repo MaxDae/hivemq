@@ -25,6 +25,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockitoAnnotations;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -70,6 +71,7 @@ public class ConfigArchiverTest {
         calendar.set(Calendar.HOUR_OF_DAY, hour);
         calendar.set(Calendar.MINUTE, 30);
         calendar.set(Calendar.SECOND, 45);
+        calendar.set(Calendar.MILLISECOND, 0);
         return calendar.getTime();
     }
 
@@ -136,4 +138,30 @@ public class ConfigArchiverTest {
                 filename.contains("-02-")
         );
     }
-}
+
+
+    @Test
+    public void test_archiving_same_second_should_produce_diff_ms() throws Exception {
+
+        configArchiver.archive(validConfig());
+        Thread.sleep(1); // 1ms gap — enough to guarantee different SSS value
+        configArchiver.archive(validConfig());
+
+        // Assert — two distinct files on disk
+        File archiveFolder = new File(folder, "credentials-archive");
+        File[] files = archiveFolder.listFiles();
+
+        assertNotNull("Archive folder should exist", files);
+        assertEquals("Should have 2 distinct archive files", 2, files.length);
+
+        String filename1 = files[0].getName();
+        String filename2 = files[1].getName();
+        System.out.println("Archive 1: " + filename1);
+        System.out.println("Archive 2: " + filename2);
+
+        assertNotEquals(
+                "Two archives should have different filenames",
+                filename1, filename2
+        );
+    }
+    }

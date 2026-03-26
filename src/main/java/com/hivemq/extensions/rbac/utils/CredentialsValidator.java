@@ -59,15 +59,13 @@ public class CredentialsValidator {
 
         final @Nullable FileAuthConfig currentConfig = configuration.getCurrentConfig();
         if (currentConfig != null) {
-            updateUsersMap(currentConfig);
-            updateRolesMap(currentConfig);
+            updateMaps(currentConfig);
         }
 
         configuration.addReloadCallback(new Configuration.ReloadCallback() {
             @Override
             public void onReload(final @Nullable FileAuthConfig oldConfig, final @NotNull FileAuthConfig newConfig) {
-                updateUsersMap(newConfig);
-                updateRolesMap(newConfig);
+                updateMaps(newConfig);
             }
         });
     }
@@ -142,40 +140,37 @@ public class CredentialsValidator {
         return Base64.getEncoder().encodeToString(passwordBytes);
     }
 
-    private void updateUsersMap(final @NotNull FileAuthConfig config) {
-        final List<User> newUsers = config.getUsers();
+    private void updateMaps(final @NotNull FileAuthConfig config) {
 
-        final ConcurrentHashMap<String, User> newUsersMap = new ConcurrentHashMap<>(newUsers.size());
+        // Build both maps BEFORE acquiring any lock
+        final List<User> newUsers = config.getUsers();
+        final ConcurrentHashMap<String, User> newUsersMap =
+                new ConcurrentHashMap<>(newUsers.size());
         for (User newUser : newUsers) {
             newUsersMap.put(newUser.getName(), newUser);
         }
 
-        final Lock writeLock = usersLock.writeLock();
-        writeLock.lock();
-        try {
-            users = newUsersMap;
-        } finally {
-            writeLock.unlock();
-        }
-    }
-
-    private void updateRolesMap(final @NotNull FileAuthConfig config) {
         final List<Role> newRoles = config.getRoles();
-
-        final ConcurrentHashMap<String, Role> newRolesMap = new ConcurrentHashMap<>(newRoles.size());
+        final ConcurrentHashMap<String, Role> newRolesMap =
+                new ConcurrentHashMap<>(newRoles.size());
         for (Role newRole : newRoles) {
             newRolesMap.put(newRole.getId(), newRole);
         }
 
-        final Lock writeLock = rolesLock.writeLock();
-        writeLock.lock();
+        // Lock BOTH maps together — no gap possible
+        final Lock usersWrite = usersLock.writeLock();
+        final Lock rolesWrite = rolesLock.writeLock();
+
+        usersWrite.lock();
+        rolesWrite.lock();
         try {
-            roles = newRolesMap;
+            users = newUsersMap;  // ← both assignments happen
+            roles = newRolesMap;  // ← inside the same lock
         } finally {
-            writeLock.unlock();
+            rolesWrite.unlock();  // ← release in reverse order
+            usersWrite.unlock();
         }
     }
-
     private TopicPermission toTopicPermission(final @NotNull String clientId, final @NotNull String userName, final @NotNull Permission permission) {
         return Builders.topicPermission()
                 .topicFilter(getTopicFilter(clientId, userName, permission))

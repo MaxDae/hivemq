@@ -58,7 +58,8 @@ public class ConfigArchiver {
     public synchronized void archive(final @Nullable FileAuthConfig config) throws IOException {
 
         if (config == null) {
-            log.debug("Configuration is invalid, archiving is not possible");
+            // TODO: Exception should be added here
+            log.warn("Configuration is invalid, archiving is not possible");
             return;
         }
 

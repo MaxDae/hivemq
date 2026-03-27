@@ -39,7 +39,7 @@ public class ExtensionConfig {
     
     @NotNull
     @XmlElement(name = "password-type", defaultValue = "HASHED")
-    private PasswordType passwordType = PasswordType.PLAIN;
+    private PasswordType passwordType = PasswordType.HASHED;
     
 
     public ExtensionConfig() {

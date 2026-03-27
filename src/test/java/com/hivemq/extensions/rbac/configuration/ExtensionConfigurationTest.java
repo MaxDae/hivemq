@@ -18,6 +18,7 @@
 package com.hivemq.extensions.rbac.configuration;
 
 import com.hivemq.extensions.rbac.configuration.entities.ExtensionConfig;
+import com.hivemq.extensions.rbac.configuration.entities.PasswordType;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -58,6 +59,40 @@ public class ExtensionConfigurationTest {
         assertEquals(HASHED, extensionConfig.getPasswordType());
         assertEquals(1, extensionConfig.getListenerNames().size());
         assertTrue(extensionConfig.getListenerNames().contains("normal-listener"));
+    }
+
+    @Test
+    public void test_no_password_from_xml_default_hashed()
+            throws Exception {
+
+        final XmlParser xmlParser = new XmlParser();
+        File configFile = temporaryFolder.newFile("extension-config.xml");
+        Files.writeString(configFile.toPath(),
+                "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                        "<extension-configuration>\n" +
+                        "    <credentials-reload-interval>60</credentials-reload-interval>\n" +
+                        "    <!-- no <password-type> element -->\n" +
+                        "</extension-configuration>"
+        );
+
+        // Parse exactly as production code does
+        ExtensionConfig config = xmlParser.unmarshalExtensionConfig(configFile);
+
+        assertEquals(
+                "Default passwordType should be HASHED",
+                PasswordType.HASHED,
+                config.getPasswordType()
+        );
+    }
+    @Test
+    public void test_no_args_constructor_should_be_hashed() {
+
+        ExtensionConfig config = new ExtensionConfig();
+        assertEquals(
+                "No-arg constructor default should be HASHED",
+                PasswordType.HASHED,
+                config.getPasswordType()
+        );
     }
 
 

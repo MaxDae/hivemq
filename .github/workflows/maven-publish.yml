@@ -20,7 +20,7 @@ jobs:
           cache: maven
 
       - name: Run unit tests
-        run:  run: mvn -B test -P '!Packaging' --file pom.xml
+        run: mvn -B test -P '!Packaging' --file pom.xml
 
       - name: Publish test results
         uses: dorny/test-reporter@v1

@@ -59,14 +59,14 @@ public class FileAuthAuthenticator implements SimpleAuthenticator {
         final String userName = userNameOptional.get();
 
         //prevent clientIds with MQTT wildcard characters
-        if (clientId.contains("#")) {
+        if (clientId.contains("#") || clientId.contains("+")) {
             //client is not authenticated
             simpleAuthOutput.failAuthentication(ConnackReasonCode.CLIENT_IDENTIFIER_NOT_VALID, "The characters '#' and '+' are not allowed in the client identifier");
             return;
         }
 
         //prevent usernames with MQTT wildcard characters
-        if (userName.contains("#")) {
+        if (userName.contains("#") || userName.contains("+")) {
             //client is not authenticated
             simpleAuthOutput.failAuthentication(ConnackReasonCode.BAD_USER_NAME_OR_PASSWORD, "The characters '#' and '+' are not allowed in the username");
             return;

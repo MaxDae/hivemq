@@ -82,6 +82,24 @@ public class FileAuthAuthenticatorTest {
         verify(output).failAuthentication(ConnackReasonCode.BAD_USER_NAME_OR_PASSWORD, "The characters '#' and '+' are not allowed in the username");
     }
 
+    @Test
+    public void test_connect_with_wildcard_clientId() {
+        fileAuthAuthenticator.onConnect(new TestInput("client1/#", "client", "pass1"), output);
+        verify(output).failAuthentication(ConnackReasonCode.CLIENT_IDENTIFIER_NOT_VALID, "The characters '#' and '+' are not allowed in the client identifier");
+    }
+
+    @Test
+    public void test_connect_with_plus_clientId() {
+        fileAuthAuthenticator.onConnect(new TestInput("client1/+", "client", "pass1"), output);
+        verify(output).failAuthentication(ConnackReasonCode.CLIENT_IDENTIFIER_NOT_VALID, "The characters '#' and '+' are not allowed in the client identifier");
+    }
+
+    @Test
+    public void test_with_plus_username() {
+        fileAuthAuthenticator.onConnect(new TestInput("client1", "client/+", "pass1"), output);
+        verify(output).failAuthentication(ConnackReasonCode.BAD_USER_NAME_OR_PASSWORD, "The characters '#' and '+' are not allowed in the username");
+    }
+
     @SuppressWarnings("ConstantConditions")
     private class TestInput implements SimpleAuthInput {
 

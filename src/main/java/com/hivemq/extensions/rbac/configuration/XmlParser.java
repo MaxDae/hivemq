@@ -31,6 +31,7 @@ import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 
 @ThreadSafe
@@ -48,6 +49,10 @@ public class XmlParser {
             log.error("Error in the File Auth Extension. Could not initialize XML parser", e);
             throw new RuntimeException(e);
         }
+    }
+
+    XmlParser(final @NotNull JAXBContext jaxb) {
+        this.jaxb = jaxb;
     }
 
     /**
@@ -69,7 +74,7 @@ public class XmlParser {
             throw new NotMarshallableException("File " + file.getAbsolutePath() + " already exists");
         }
 
-        if (file.canWrite()) {
+        if (!file.getParentFile().canWrite()) {
             throw new NotMarshallableException("Could not write config to file " + file.getAbsolutePath() + " because it's not writable");
         }
 
@@ -86,6 +91,21 @@ public class XmlParser {
 
     @NotNull
     public FileAuthConfig unmarshalFileAuthConfig(final @NotNull File file) throws IOException {
+        Objects.requireNonNull(file, "Config file cannot be null");
+
+        if (!file.exists()) {
+            throw new IOException(
+                    "Config file does not exist: " + file.getAbsolutePath());
+        }
+        if (!file.canRead()) {
+            throw new IOException(
+                    "Config file is not readable: " + file.getAbsolutePath());
+        }
+
+        if (file.isDirectory()) {
+            throw new IOException(
+                    "Config file is directory: " + file.getAbsolutePath());
+        }
 
         try {
             final Unmarshaller unmarshaller = jaxb.createUnmarshaller();
@@ -107,5 +127,4 @@ public class XmlParser {
         }
 
     }
-
 }

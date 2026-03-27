@@ -24,10 +24,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.Marshaller;
 import java.io.File;
 import java.net.URL;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 public class XmlParserTest {
 
@@ -84,4 +90,29 @@ public class XmlParserTest {
         assertEquals(120, config.getReloadInterval());
     }
 
+    @Test
+    public void test_marshal_non_writable_directory_throws_before_jaxb()
+            throws Exception {
+
+        JAXBContext mockJaxb = mock(JAXBContext.class);
+        Marshaller mockMarshaller = mock(Marshaller.class);
+        when(mockJaxb.createMarshaller()).thenReturn(mockMarshaller);
+
+        XmlParser xmlParser = new XmlParser(mockJaxb); // ← injectable
+
+        File folder = temporaryFolder.newFolder("non-writable");
+        folder.setWritable(false);
+        File file = new File(folder, "credentials.xml");
+
+        try {
+            xmlParser.marshal(new FileAuthConfig(), file);
+            fail("Should throw NotMarshallableException");
+
+        } catch (NotMarshallableException e) {
+            verify(mockJaxb, never()).createMarshaller();
+
+        } finally {
+            folder.setWritable(true);
+        }
+    }
 }

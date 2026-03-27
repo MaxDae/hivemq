@@ -50,6 +50,10 @@ public class XmlParser {
         }
     }
 
+    XmlParser(final @NotNull JAXBContext jaxb) {
+        this.jaxb = jaxb;
+    }
+
     /**
      * Marshals a Config to a XML file.
      * <p>
@@ -69,7 +73,7 @@ public class XmlParser {
             throw new NotMarshallableException("File " + file.getAbsolutePath() + " already exists");
         }
 
-        if (file.canWrite()) {
+        if (!file.getParentFile().canWrite()) {
             throw new NotMarshallableException("Could not write config to file " + file.getAbsolutePath() + " because it's not writable");
         }
 

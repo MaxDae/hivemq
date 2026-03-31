@@ -24,6 +24,7 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: maven
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -41,8 +42,5 @@ jobs:
         if: always()
         with:
           name: Maven E2E Test Results (${{ github.event.inputs.branch }})
-          if: always() && steps.check_files.outputs.found == 'true'
-          uses: dorny/test-reporter@v1
-          with:
-            path: '**/target/failsafe-reports/*.xml'
-            reporter: java-junit
+          path: '**/target/failsafe-reports/TEST-*.xml'
+          reporter: java-junit

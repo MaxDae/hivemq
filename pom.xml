@@ -27,7 +27,7 @@
 
     <properties>
         <extension.name>File Role Based Access Control Extension</extension.name>
-        <asciidoctor.version>1.5.2.1</asciidoctor.version>
+        <asciidoctor.version>2.2.4</asciidoctor.version>
         <output.dir>${basedir}</output.dir>
         <source.document.name>README.adoc</source.document.name>
     </properties>
@@ -176,6 +176,53 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <!-- Exclude e2e integration tests -->
+                    <excludes>
+                        <exclude>**/e2e/**</exclude>
+
+                        <exclude>**/*IntegrationTest.java</exclude>
+                        <exclude>**/*ExtensionStartupIntegrationTest.java</exclude>
+                        <exclude>**/*ExtensionIntegrationTestPlain.java</exclude>
+                        <exclude>**/*IntegrationTest.java</exclude>
+                        <exclude>**/OldConfigCallbackTest.java</exclude>
+                        <exclude>**/InvalidPasswordTest.java</exclude>
+                    </excludes>
+                    <!-- Fix PowerMock Java module access -->
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.io=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                        --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                    </argLine>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <includes>
+                        <include>**/e2e/**</include>
+                    </includes>
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                    </argLine>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
                 <version>3.1.1</version>
                 <executions>
@@ -231,7 +278,7 @@
                         <executions>
                             <execution>
                                 <id>unpack-extension-for-testing</id>
-                                <phase>verify</phase>
+                                <phase>package</phase>
                                 <goals>
                                     <goal>run</goal>
                                 </goals>

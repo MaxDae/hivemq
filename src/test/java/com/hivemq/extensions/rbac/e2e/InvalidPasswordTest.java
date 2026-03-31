@@ -1,4 +1,4 @@
-package com.hivemq.extensions.rbac;
+package com.hivemq.extensions.rbac.e2e;
 
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;

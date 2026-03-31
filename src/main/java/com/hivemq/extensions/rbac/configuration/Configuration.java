@@ -215,11 +215,11 @@ public class Configuration {
                 log.warn("Archival of the old credentials config failed. Reason: {}", e.getMessage());
             }
 
+            oldConfig = newConfig;  // ← overwrites BEFORE callbacks
+
             for (ReloadCallback callback : callbacks) {
                 callback.onReload(oldConfig, newConfig);
             }
-
-            oldConfig = newConfig;
         }
     }
 

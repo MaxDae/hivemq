@@ -7,6 +7,9 @@ import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
 import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.hivemq.HiveMQContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -22,6 +25,8 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.Assert.*;
 
 public class ExtensionStartupIntegrationTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(InvalidPasswordTest.class);
 
     @ClassRule
     public static HiveMQContainer container = createContainer();
@@ -89,6 +94,7 @@ public class ExtensionStartupIntegrationTest {
                             MountableFile.forHostPath(configFile),
                             "hivemq-file-rbac-extension",
                             "extension-config.xml")
+                    .withLogConsumer(new Slf4jLogConsumer(logger))
                     .waitingFor(Wait.forLogMessage(".*File Role Based Access Control Extension.*started successfully.*", 1));
 
         } catch (Exception e) {

@@ -56,7 +56,7 @@ public class ConfigParserTest {
         final FileAuthConfig fileAuthConfig = configParser.read(file);
 
         assertEquals(2, fileAuthConfig.getRoles().size());
-        assertEquals(2, fileAuthConfig.getUsers().size());
+        assertEquals(3, fileAuthConfig.getUsers().size());
     }
 
     @Test

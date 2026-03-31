@@ -74,7 +74,8 @@ public class XmlParser {
             throw new NotMarshallableException("File " + file.getAbsolutePath() + " already exists");
         }
 
-        if (!file.getParentFile().canWrite()) {
+        final File parentFile = file.getAbsoluteFile().getParentFile();
+        if (parentFile == null || !parentFile.exists() || !parentFile.canWrite()) {
             throw new NotMarshallableException("Could not write config to file " + file.getAbsolutePath() + " because it's not writable");
         }
 
@@ -109,7 +110,11 @@ public class XmlParser {
 
         try {
             final Unmarshaller unmarshaller = jaxb.createUnmarshaller();
-            return (FileAuthConfig) unmarshaller.unmarshal(file);
+            final FileAuthConfig config = (FileAuthConfig) unmarshaller.unmarshal(file);
+            if (config == null) {
+                throw new IOException("Failed to parse config file — file is empty or has no valid content: " + file.getAbsolutePath());
+            }
+            return config;
         } catch (JAXBException e) {
             throw new IOException(e);
         }

@@ -79,7 +79,7 @@ public class ConfigArchiver {
             if (!archiveFolder.mkdir()) {
                 throw new IOException("Could not create credentials archive folder " + archiveFolder.getAbsolutePath());
             } else {
-                log.info("Created credentials Archive folder {}." + archiveFolder.getAbsolutePath());
+                log.info("Created credentials archive folder {}.", archiveFolder.getAbsolutePath());
             }
         }
 

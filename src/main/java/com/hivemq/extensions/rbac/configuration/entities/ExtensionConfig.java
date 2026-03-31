@@ -21,7 +21,6 @@ import com.hivemq.extension.sdk.api.annotations.NotNull;
 import com.hivemq.extension.sdk.api.annotations.Nullable;
 
 import javax.xml.bind.annotation.*;
-import java.util.List;
 import java.util.Set;
 
 

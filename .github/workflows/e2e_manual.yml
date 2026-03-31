@@ -1,6 +1,6 @@
 name: E2E Tests (Manual)
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       branch:
@@ -36,14 +36,9 @@ jobs:
 
       - name: Pre-pull HiveMQ image
         run: docker pull "$HIVEMQ_TEST_IMAGE"
-
-
-      # Single verify call runs the full lifecycle in correct order:
-      # compile → package (assembly creates ZIP) →
-      # pre-integration-test (antrun unpacks ZIP) →
-      # integration-test (failsafe runs E2E) → verify
       - name: Run E2E tests
-        run: mvn -B verify -Pe2e -Dhivemq.test.image="$HIVEMQ_TEST_IMAGE" --file pom.xml
+        run: >-
+          mvn -B verify -Pe2e -Dhivemq.test.image="$HIVEMQ_TEST_IMAGE" --file pom.xml
 
       - name: Publish E2E test results
         uses: dorny/test-reporter@v1

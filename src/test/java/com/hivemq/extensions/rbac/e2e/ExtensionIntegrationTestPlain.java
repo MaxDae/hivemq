@@ -65,8 +65,10 @@ public class ExtensionIntegrationTestPlain {
 
             return new HiveMQContainer(
                     DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
-                    .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "true")
-                    .withStartupTimeout(Duration.ofMinutes(5))// pin version!
+                    .withStartupTimeout(Duration.ofMinutes(5))
+                    .withCreateContainerCmdModifier(cmd -> cmd.withUser("0"))
+                    .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "false")
+
                     .withExtension(MountableFile.forHostPath(extensionDir))
                     .withStartupTimeout(Duration.ofSeconds(120))
                     .waitForExtension("File Role Based Access Control Extension");

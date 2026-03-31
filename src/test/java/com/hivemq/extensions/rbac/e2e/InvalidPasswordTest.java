@@ -36,7 +36,8 @@ public class InvalidPasswordTest {
         return new HiveMQContainer(
                 DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
                 .withStartupTimeout(Duration.ofMinutes(5))
-                .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "true")
+                .withCreateContainerCmdModifier(cmd -> cmd.withUser("0"))
+                .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "false")
                 .withExtension(MountableFile.forHostPath(
                         "target/unpacked-extension/hivemq-file-rbac-extension"))
 //                .withoutPrepackagedExtensions()

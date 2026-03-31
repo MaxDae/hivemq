@@ -76,10 +76,9 @@ public class ExtensionStartupIntegrationTest {
 
             return new HiveMQContainer(
                     DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
-                    .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "true")
                     .withStartupTimeout(Duration.ofMinutes(5))
-//                    .withoutPrepackagedExtensions("hivemq-allow-all-extension")
-
+                    .withCreateContainerCmdModifier(cmd -> cmd.withUser("0"))
+                    .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "false")
                     .withExtension(MountableFile.forHostPath(
                             "target/unpacked-extension/hivemq-file-rbac-extension"))
                     .withFileInExtensionHomeFolder(

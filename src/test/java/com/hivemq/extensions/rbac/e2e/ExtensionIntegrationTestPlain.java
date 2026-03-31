@@ -10,6 +10,7 @@ import org.testcontainers.utility.MountableFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 import static org.junit.Assert.*;
 
@@ -20,8 +21,10 @@ public class ExtensionIntegrationTestPlain {
 
     private static HiveMQContainer createContainer() {
         try {
-            Path credentialsFile = Files.createTempFile("credentials", ".xml");
-            Files.writeString(credentialsFile,
+            Path extensionDir = Path.of("target/unpacked-extension/hivemq-file-rbac-extension").toAbsolutePath();
+
+            // Write config files directly into the extension dir — avoids volume override issues
+            Files.writeString(extensionDir.resolve("credentials.xml"),
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
                             "<file-rbac>\n" +
                             "    <users>\n" +
@@ -40,50 +43,35 @@ public class ExtensionIntegrationTestPlain {
                             "        <role>\n" +
                             "            <id>role1</id>\n" +
                             "            <permissions>\n" +
-                            "                <permission>\n" +
-                            "                    <topic>data/${{clientid}}/#</topic>\n" +
-                            "                </permission>\n" +
+                            "                <permission><topic>data/${{clientid}}/#</topic></permission>\n" +
                             "            </permissions>\n" +
                             "        </role>\n" +
                             "        <role>\n" +
                             "            <id>superuser</id>\n" +
                             "            <permissions>\n" +
-                            "                <permission>\n" +
-                            "                    <topic>#</topic>\n" +
-                            "                </permission>\n" +
+                            "                <permission><topic>#</topic></permission>\n" +
                             "            </permissions>\n" +
                             "        </role>\n" +
                             "    </roles>\n" +
-                            "</file-rbac>"
-            );
+                            "</file-rbac>");
 
-            Path configFile = Files.createTempFile("extension-config", ".xml");
-            Files.writeString(configFile,
+            Files.writeString(extensionDir.resolve("extension-config.xml"),
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
                             "<extension-configuration>\n" +
                             "    <credentials-reload-interval>60</credentials-reload-interval>\n" +
                             "    <password-type>PLAIN</password-type>\n" +
-                            "</extension-configuration>"
-            );
+                            "</extension-configuration>");
 
             return new HiveMQContainer(
-                    DockerImageName.parse("hivemq/hivemq-ce:latest"))
-                    .withExtension(MountableFile.forHostPath(
-                            "target/unpacked-extension/hivemq-file-rbac-extension"))
-                    .withFileInExtensionHomeFolder(
-                            MountableFile.forHostPath(credentialsFile),
-                            "hivemq-file-rbac-extension",
-                            "credentials.xml")
-                    .withFileInExtensionHomeFolder(
-                            MountableFile.forHostPath(configFile),
-                            "hivemq-file-rbac-extension",
-                            "extension-config.xml");
+                    DockerImageName.parse("hivemq/hivemq-ce:2021.3"))  // pin version!
+                    .withExtension(MountableFile.forHostPath(extensionDir))
+                    .withStartupTimeout(Duration.ofSeconds(120))
+                    .waitForExtension("File Role Based Access Control Extension");
 
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
-
     // ─── Helper ───────────────────────────────────────────────────────────────
 
     private Mqtt5BlockingClient buildClient(String username, String password) {

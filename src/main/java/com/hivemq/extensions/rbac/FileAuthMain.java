@@ -62,6 +62,7 @@ public class FileAuthMain implements ExtensionMain {
 
         } catch (Exception e) {
             log.error("Exception thrown at extension start: ", e);
+            extensionStartOutput.preventExtensionStartup("Extension failed to start: " + e.getMessage());
         }
 
     }

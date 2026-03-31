@@ -36,6 +36,7 @@ public class InvalidPasswordTest {
                 DockerImageName.parse("hivemq/hivemq-ce:latest"))
                 .withExtension(MountableFile.forHostPath(
                         "target/unpacked-extension/hivemq-file-rbac-extension"))
+                .withoutPrepackagedExtensions()
                 .withFileInExtensionHomeFolder(
                         MountableFile.forHostPath(credentialsFile),
                         "hivemq-file-rbac-extension",

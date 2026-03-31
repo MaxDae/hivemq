@@ -136,10 +136,7 @@ public class ConfigCredentialsValidator {
                 final String[] split = password.split(":", -1); // ← -1 keeps trailing empty
 
 
-                if (split.length != 3
-                        || split[0].isEmpty()
-                        || split[1].isEmpty()
-                        || split[2].isEmpty()) {
+                if (split.length != 3 || split[0].isEmpty() || split[1].isEmpty() || split[2].isEmpty()) {
                     errors.add("User '" + user.getName() +
                             "' has invalid password format — expected salt:iterations:hash");
                     validationSuccessful = false;

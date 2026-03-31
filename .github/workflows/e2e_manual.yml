@@ -28,10 +28,23 @@ jobs:
       - name: Run E2E tests
         run: mvn -B verify -Pe2e --file pom.xml
 
+      - name: Check for Test Reports
+        id: check_files
+        if: always()
+        run: |
+          if [ -n "$(find target/failsafe-reports -name 'TEST-*.xml' -print -quit)" ]; then
+            echo "found=true" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Publish E2E test results
         uses: dorny/test-reporter@v1
         if: always()
         with:
           name: Maven E2E Test Results (${{ github.event.inputs.branch }})
-          path: '**/target/failsafe-reports/*.xml'
-          reporter: java-junit
+          if: always() && steps.check_files.outputs.found == 'true'
+          uses: dorny/test-reporter@v1
+          with:
+            path: '**/target/failsafe-reports/*.xml'
+            reporter: java-junit

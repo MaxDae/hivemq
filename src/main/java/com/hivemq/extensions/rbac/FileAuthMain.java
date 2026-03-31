@@ -70,7 +70,6 @@ public class FileAuthMain implements ExtensionMain {
     @Override
     public void extensionStop(final @NotNull ExtensionStopInput extensionStopInput, final @NotNull ExtensionStopOutput extensionStopOutput) {
         if (this.configuration != null) {
-            this.configuration.stop();
             log.info("File RBAC extension stopped. Thread tasks cancelled.");
         }
     }

@@ -34,8 +34,12 @@ jobs:
       - name: Pre-pull HiveMQ image
         run: docker pull hivemq/hivemq-ce:2025.5
 
+      # Ensure the extension is shaded and the ZIP is created before E2E runs
+      - name: Build and Package Extension
+        run: mvn clean package -Ppackaging -DskipTests -B
+
       - name: Run E2E tests
-        run: mvn -B verify -Pe2e --file pom.xml
+        run: mvn verify -Pe2e -Ppackaging -DskipUnitTests -B
 
       - name: Publish E2E test results
         uses: dorny/test-reporter@v1

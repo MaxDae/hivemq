@@ -3,6 +3,7 @@ package com.hivemq.extensions.rbac.e2e;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
 import org.junit.Test;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.hivemq.HiveMQContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -48,7 +49,8 @@ public class InvalidPasswordTest {
                 .withFileInExtensionHomeFolder(
                         MountableFile.forHostPath(buildExtensionConfig()),
                         "hivemq-file-rbac-extension",
-                        "extension-config.xml");
+                        "extension-config.xml")
+                .waitingFor(Wait.forLogMessage(".*Extension \"File RBAC Extension\" started successfully.*\\n", 3));
     }
 
     // ─── Helper — builds credentials.xml ─────────────────────────────────────

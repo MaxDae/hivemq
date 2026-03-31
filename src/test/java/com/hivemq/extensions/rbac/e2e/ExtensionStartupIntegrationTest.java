@@ -88,7 +88,8 @@ public class ExtensionStartupIntegrationTest {
                     .withFileInExtensionHomeFolder(
                             MountableFile.forHostPath(configFile),
                             "hivemq-file-rbac-extension",
-                            "extension-config.xml");
+                            "extension-config.xml")
+                    .waitingFor(Wait.forLogMessage(".*Extension \"File RBAC Extension\" started successfully.*\\n", 3));
 
         } catch (Exception e) {
             throw new RuntimeException(e);

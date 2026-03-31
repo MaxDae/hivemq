@@ -4,6 +4,7 @@ import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.hivemq.HiveMQContainer;
 import org.testcontainers.utility.DockerImageName;
 import org.testcontainers.utility.MountableFile;
@@ -71,7 +72,7 @@ public class ExtensionIntegrationTestPlain {
 
                     .withExtension(MountableFile.forHostPath(extensionDir))
                     .withStartupTimeout(Duration.ofSeconds(120))
-                    .waitForExtension("File Role Based Access Control Extension");
+                    .waitingFor(Wait.forLogMessage(".*Extension \"File RBAC Extension\" started successfully.*\\n", 3));
 
         } catch (Exception e) {
             throw new RuntimeException(e);

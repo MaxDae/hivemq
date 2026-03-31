@@ -133,13 +133,34 @@ public class ConfigCredentialsValidator {
             if (extensionConfig.getPasswordType() == PasswordType.HASHED) {
 
                 final String password = user.getPassword();
-                final String[] split = password.split(":");
+                final String[] split = password.split(":", -1); // ← -1 keeps trailing empty
 
-                if (split.length < 2 || split[0].isEmpty() || split[1].isEmpty()) {
-                    errors.add("User '" + user.getName() + "' has invalid password");
+
+                if (split.length != 3
+                        || split[0].isEmpty()
+                        || split[1].isEmpty()
+                        || split[2].isEmpty()) {
+                    errors.add("User '" + user.getName() +
+                            "' has invalid password format — expected salt:iterations:hash");
                     validationSuccessful = false;
                     continue;
                 }
+
+
+            try {
+                int iterations = Integer.parseInt(split[1]);
+                if (iterations < 1) {
+                    errors.add("User '" + user.getName() +
+                            "' has invalid iteration count — must be > 0");
+                    validationSuccessful = false;
+                    continue;
+                }
+            } catch (NumberFormatException e) {
+                errors.add("User '" + user.getName() +
+                        "' has non-numeric iteration count: '" + split[1] + "'");
+                validationSuccessful = false;
+                continue;
+            }
             }
 
             if (user.getRoles() == null || user.getRoles().isEmpty()) {

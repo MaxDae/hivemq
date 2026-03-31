@@ -26,7 +26,7 @@ import static org.junit.Assert.*;
 
 public class ExtensionStartupIntegrationTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(InvalidPasswordTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExtensionStartupIntegrationTest.class);
 
     @ClassRule
     public static HiveMQContainer container = createContainer();

@@ -12,7 +12,7 @@ jobs:
   e2e-test:
     runs-on: ubuntu-latest
     env:
-      HIVEMQ_TEST_IMAGE: hivemq/hivemq-ce:2021.3
+      HIVEMQ_TEST_IMAGE: hivemq/hivemq-ce:latest
 
     steps:
       - name: Checkout code

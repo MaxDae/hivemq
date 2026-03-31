@@ -7,12 +7,20 @@ name: E2E Tests (Manual)
         description: 'Branch to run E2E tests on'
         required: true
         default: 'main'
+      hivemq_image:
+        description: 'HiveMQ Docker image for E2E tests'
+        type: choice
+        required: true
+        default: 'hivemq/hivemq-ce:latest'
+        options:
+          - 'hivemq/hivemq-ce:latest'
+          - 'hivemq/hivemq-ce:2021.3'
 
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
     env:
-      HIVEMQ_TEST_IMAGE: hivemq/hivemq-ce:latest
+      HIVEMQ_TEST_IMAGE: ${{ github.event.inputs.hivemq_image }}
 
     steps:
       - name: Checkout code
@@ -47,6 +55,6 @@ jobs:
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Maven E2E Test Results (${{ github.event.inputs.branch }})
+          name: Maven E2E Test Results (${{ github.event.inputs.branch }}, ${{ env.HIVEMQ_TEST_IMAGE }})
           path: '**/target/failsafe-reports/TEST-*.xml'
           reporter: java-junit

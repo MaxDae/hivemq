@@ -42,6 +42,27 @@ Install the extension. The users and roles from the example configuration files 
 
 Setup your custom Users and Roles in the credentials configuration and configure the extension for your specific use case.
 
+=== Tests (Unit + E2E)
+
+Unit tests run automatically in GitHub Actions workflow `PR Unit Tests` on pull requests to `main` and `master` (and can also be run manually from the workflow UI).
+
+To run E2E tests locally:
+
+[source,bash]
+----
+mvn -B verify -Pe2e --file pom.xml
+----
+
+To run E2E tests against a specific HiveMQ image:
+
+[source,bash]
+----
+mvn -B verify -Pe2e -Dhivemq.test.image=hivemq/hivemq-ce:latest --file pom.xml
+----
+
+In CI, E2E tests are executed from the manual workflow `E2E Tests (Manual)` and the HiveMQ image is configurable as a workflow input.
+For Jenkins users, see `Jenkinsfile.example` in the repository root.
+
 CAUTION: Because client identifier and user names can be used for <<substitution,substitution>> in the permissions, MQTT wildcard characters `#` and  `+` are prohibited for client identifier and user names when this extension is used. MQTT connections which include these characters are denied by this extension.
 
 [#configuration]

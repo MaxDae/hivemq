@@ -57,8 +57,6 @@ public class Configuration {
     //guarded by lock
     private @Nullable FileAuthConfig config;
 
-    private ScheduledFuture<?> scheduledFuture;
-
     public Configuration(final @NotNull File extensionHomeFolder,
                          final @NotNull ScheduledExecutorService extensionExecutorService,
                          final @NotNull ExtensionConfig extensionConfig) {
@@ -71,22 +69,9 @@ public class Configuration {
                 newCallbacks,
                 configParser,
                 new ConfigArchiver(extensionHomeFolder, new XmlParser()), this);
-//        extensionExecutorService.scheduleWithFixedDelay(reloadableTask, extensionConfig.getReloadInterval(),
-//                extensionConfig.getReloadInterval(), TimeUnit.SECONDS);
+        extensionExecutorService.scheduleWithFixedDelay(reloadableTask, extensionConfig.getReloadInterval(),
+                extensionConfig.getReloadInterval(), TimeUnit.SECONDS);
 
-        this.scheduledFuture = extensionExecutorService.scheduleWithFixedDelay(
-                reloadableTask,
-                extensionConfig.getReloadInterval(),
-                extensionConfig.getReloadInterval(),
-                TimeUnit.SECONDS
-        );
-    }
-    public void stop() {
-        if (scheduledFuture != null) {
-            // true means interrupt the thread if it is currently running
-            scheduledFuture.cancel(true);
-            log.info("Successfully cancelled the credentials reload task.");
-        }
     }
 
     public void init() {

@@ -15,6 +15,7 @@ import org.testcontainers.utility.MountableFile;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -74,9 +75,9 @@ public class ExtensionStartupIntegrationTest {
             );
 
             return new HiveMQContainer(
-                    DockerImageName.parse("hivemq/hivemq-ce:latest"))
+                    DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
 
-                    // ← remove only allow-all, keep others
+                    .withStartupTimeout(Duration.ofMinutes(3))
                     .withoutPrepackagedExtensions("hivemq-allow-all-extension")
 
                     .withExtension(MountableFile.forHostPath(

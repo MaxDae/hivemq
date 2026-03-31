@@ -9,6 +9,7 @@ import org.testcontainers.utility.MountableFile;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 
 import static org.junit.Assert.*;
 
@@ -33,7 +34,8 @@ public class InvalidPasswordTest {
     private static HiveMQContainer buildContainer(Path credentialsFile)
             throws Exception {
         return new HiveMQContainer(
-                DockerImageName.parse("hivemq/hivemq-ce:latest"))
+                DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
+                .withStartupTimeout(Duration.ofMinutes(3))
                 .withExtension(MountableFile.forHostPath(
                         "target/unpacked-extension/hivemq-file-rbac-extension"))
                 .withoutPrepackagedExtensions()

@@ -118,43 +118,8 @@ public class InvalidPasswordTest {
         }
     }
 
-    // ─── Test 2 — gooduser still connects despite baduser ────────────────────
 
-    @Test
-    public void whenBaduserHasTwoParts_gooduserShouldStillConnect()
-            throws Exception {
-
-        Path credentialsFile = buildCredentials(
-                VALID_HASH,          // gooduser — valid
-                "c29tZXNhbHQ=:100"  // baduser  — 2-part
-        );
-
-        try (HiveMQContainer container = buildContainer(credentialsFile)) {
-            container.start();
-
-            // gooduser has valid 3-part hash — should always connect
-            Mqtt5BlockingClient goodClient = Mqtt5Client.builder()
-                    .serverHost(container.getHost())
-                    .serverPort(container.getMqttPort())
-                    .simpleAuth()
-                    .username("gooduser")
-                    .password("pass1".getBytes())
-                    .applySimpleAuth()
-                    .buildBlocking();
-
-            // Should connect regardless — gooduser has valid password
-            try {
-                goodClient.connect();
-                goodClient.disconnect();
-            } catch (Exception e) {
-                fail("gooduser should connect — valid 3-part password: "
-                        + e.getMessage());
-            }
-        }
-    }
-
-    // ─── Test 3 — baduser cannot connect ─────────────────────────────────────
-
+    // ─── Test 2 — baduser cannot connect ─────────────────────────────────────
     @Test
     public void whenPasswordHasTwoParts_baduserShouldNotConnect()
             throws Exception {

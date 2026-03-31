@@ -18,7 +18,6 @@
 package com.hivemq.extensions.rbac.utils;
 
 import com.codahale.metrics.MetricRegistry;
-import com.hivemq.extensions.rbac.configuration.ConfigParser;
 import com.hivemq.extensions.rbac.configuration.Configuration;
 import com.hivemq.extensions.rbac.configuration.entities.*;
 import com.hivemq.extension.sdk.api.annotations.NotNull;
@@ -26,8 +25,6 @@ import com.hivemq.extension.sdk.api.annotations.Nullable;
 import com.hivemq.extension.sdk.api.annotations.ThreadSafe;
 import com.hivemq.extension.sdk.api.auth.parameter.TopicPermission;
 import com.hivemq.extension.sdk.api.services.builder.Builders;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -42,7 +39,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class CredentialsValidator {
 
     private final @NotNull Configuration configuration;
-    private static final Logger log = LoggerFactory.getLogger(CredentialsValidator.class);
 
     private final ReadWriteLock usersLock = new ReentrantReadWriteLock();
     private final ReadWriteLock rolesLock = new ReentrantReadWriteLock();
@@ -81,10 +77,6 @@ public class CredentialsValidator {
      */
     @Nullable
     public List<String> getRoles(final @NotNull String userName, final @NotNull ByteBuffer password) {
-
-        log.debug("getRoles called for username: '{}'", userName);
-        log.debug("Users in map: {}", users.keySet());
-
         //If Config is invalid do not allow clients to connect
         if (users.isEmpty() || roles.isEmpty()) {
             return null;
@@ -130,11 +122,20 @@ public class CredentialsValidator {
         }
 
         final ArrayList<TopicPermission> topicPermissions = new ArrayList<>();
-        for (String clientRole : clientRoles) {
-            final Role role = roles.get(clientRole);
-            for (Permission permission : role.getPermissions()) {
-                topicPermissions.add(toTopicPermission(clientId, userName, permission));
+        final Lock rolesReadLock = rolesLock.readLock();
+        rolesReadLock.lock();
+        try {
+            for (String clientRole : clientRoles) {
+                final Role role = roles.get(clientRole);
+                if (role == null || role.getPermissions() == null) {
+                    continue;
+                }
+                for (Permission permission : role.getPermissions()) {
+                    topicPermissions.add(toTopicPermission(clientId, userName, permission));
+                }
             }
+        } finally {
+            rolesReadLock.unlock();
         }
 
         return topicPermissions;
@@ -142,8 +143,9 @@ public class CredentialsValidator {
 
     @NotNull
     private String encodePassword(final @NotNull ByteBuffer password) {
-        byte[] passwordBytes = new byte[password.remaining()];
-        password.get(passwordBytes);
+        final ByteBuffer readOnlyPassword = password.asReadOnlyBuffer();
+        byte[] passwordBytes = new byte[readOnlyPassword.remaining()];
+        readOnlyPassword.get(passwordBytes);
         return Base64.getEncoder().encodeToString(passwordBytes);
     }
 

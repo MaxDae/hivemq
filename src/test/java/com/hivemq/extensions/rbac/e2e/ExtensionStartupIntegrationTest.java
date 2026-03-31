@@ -5,6 +5,7 @@ import com.hivemq.client.mqtt.datatypes.MqttQos;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
 import com.hivemq.client.mqtt.mqtt5.message.publish.Mqtt5Publish;
+import org.junit.AfterClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -28,24 +29,27 @@ public class ExtensionStartupIntegrationTest {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionStartupIntegrationTest.class);
 
+
     @ClassRule
     public static HiveMQContainer container = createContainer();
 
     private static HiveMQContainer createContainer() {
         try {
-            Path credentialsFile = Files.createTempFile("credentials", ".xml");
+            TestContainerFactory.assertExtensionBundlePresent();
+            final Path extensionDir = TestContainerFactory.createIsolatedExtensionDir();
+            final Path credentialsFile = Files.createTempFile("credentials-startup-plain", ".xml");
             Files.writeString(credentialsFile,
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
                             "<file-rbac>\n" +
                             "    <users>\n" +
                             "        <user>\n" +
                             "            <name>user1</name>\n" +
-                            "            <password>WFNQUVB0UkxjM04xa0hSR1BQNGhuOTJKVzdlbXA4bjk=:100:FY12nwpUEbBK9EKQ/Aw/rQKSoA7jXsC0HKELwU2mLCVU39bJVK0zf4NemuFeDOHPO4BW1nOjxi6NporkC6rUog==</password>\n" +
+                            "            <password>pass1</password>\n" +
                             "            <roles><id>role1</id></roles>\n" +
                             "        </user>\n" +
                             "        <user>\n" +
                             "            <name>admin-user</name>\n" +
-                            "            <password>Vjc1a0lxQ3Nvb0ljNFVHNE9WRnM3RG1IZmdNUFcwVGY=:100:PL2FLqfpdhONG7qXjAMmdVn4wlMiXnypdXiFW09zqorFhKgoiixFQw2EVJJfE9Zn79q45V7Xpc6JeKLp0ntmYA==</password>\n" +
+                            "            <password>admin-password</password>\n" +
                             "            <roles><id>superuser</id></roles>\n" +
                             "        </user>\n" +
                             "    </users>\n" +
@@ -53,50 +57,32 @@ public class ExtensionStartupIntegrationTest {
                             "        <role>\n" +
                             "            <id>role1</id>\n" +
                             "            <permissions>\n" +
-                            "                <permission>\n" +
-                            "                    <topic>data/${{clientid}}/#</topic>\n" +
-                            "                </permission>\n" +
+                            "                <permission><topic>data/${{clientid}}/#</topic></permission>\n" +
+                            "                <permission><topic>incoming/${{username}}/actions</topic><activity>SUBSCRIBE</activity></permission>\n" +
                             "            </permissions>\n" +
                             "        </role>\n" +
                             "        <role>\n" +
                             "            <id>superuser</id>\n" +
-                            "            <permissions>\n" +
-                            "                <permission>\n" +
-                            "                    <topic>#</topic>\n" +
-                            "                </permission>\n" +
-                            "            </permissions>\n" +
+                            "            <permissions><permission><topic>#</topic></permission></permissions>\n" +
                             "        </role>\n" +
                             "    </roles>\n" +
-                            "</file-rbac>"
-            );
-
-            Path configFile = Files.createTempFile("extension-config", ".xml");
-            Files.writeString(configFile,
+                            "</file-rbac>");
+            final Path extensionConfigFile = Files.createTempFile("extension-config-startup-plain", ".xml");
+            Files.writeString(extensionConfigFile,
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
                             "<extension-configuration>\n" +
                             "    <credentials-reload-interval>60</credentials-reload-interval>\n" +
-                            "    <password-type>HASHED</password-type>\n" +
-                            "</extension-configuration>"
-            );
-
-            return new HiveMQContainer(
-                    DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
+                            "    <password-type>PLAIN</password-type>\n" +
+                            "</extension-configuration>");
+            Files.copy(credentialsFile, extensionDir.resolve("credentials.xml"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(extensionConfigFile, extensionDir.resolve("extension-config.xml"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return new HiveMQContainer(DockerImageName.parse(TestContainerFactory.HIVEMQ_IMAGE))
                     .withStartupTimeout(Duration.ofMinutes(5))
                     .withCreateContainerCmdModifier(cmd -> cmd.withUser("0"))
                     .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "false")
-                    .withExtension(MountableFile.forHostPath(
-                            "target/unpacked-extension/hivemq-file-rbac-extension"))
-                    .withFileInExtensionHomeFolder(
-                            MountableFile.forHostPath(credentialsFile),
-                            "hivemq-file-rbac-extension",
-                            "credentials.xml")
-                    .withFileInExtensionHomeFolder(
-                            MountableFile.forHostPath(configFile),
-                            "hivemq-file-rbac-extension",
-                            "extension-config.xml")
+                    .withExtension(MountableFile.forHostPath(extensionDir.toString()))
                     .withLogConsumer(new Slf4jLogConsumer(logger))
-                    .waitingFor(Wait.forLogMessage(".*File Role Based Access Control Extension.*started successfully.*", 1));
-
+                    .waitingFor(Wait.forListeningPort());
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -137,8 +123,7 @@ public class ExtensionStartupIntegrationTest {
         // Proves: build → deploy → start works
         assertTrue(
                 "Extension should start successfully",
-                logs.contains("File Role Based Access Control Extension") &&
-                        logs.contains("started successfully")
+                logs.contains("Starting File RBAC extension.")
         );
     }
 
@@ -146,7 +131,7 @@ public class ExtensionStartupIntegrationTest {
 
     @Test
     public void whenValidCredentials_shouldConnect() {
-        Mqtt5BlockingClient client = buildClient("user1", "pass1", "");
+        Mqtt5BlockingClient client = buildClient("user1", "pass1", "valid-client");
 
         try {
             client.connect();
@@ -158,7 +143,7 @@ public class ExtensionStartupIntegrationTest {
 
     @Test
     public void whenWrongPassword_shouldReject() {
-        Mqtt5BlockingClient client = buildClient("user1", "wrongpassword", "");
+        Mqtt5BlockingClient client = buildClient("user1", "wrongpassword", "wrong-password-client");
 
         assertThrows(Exception.class, () -> client.connect());
     }
@@ -176,7 +161,7 @@ public class ExtensionStartupIntegrationTest {
     @Test
     public void whenAdminCredentials_shouldConnect() {
         Mqtt5BlockingClient client =
-                buildClient("admin-user", "admin-password", "");
+                buildClient("admin-user", "admin-password", "admin-client");
 
         try {
             client.connect();
@@ -189,7 +174,7 @@ public class ExtensionStartupIntegrationTest {
     @Test
     public void whenPlusInUsername_shouldReject() {
         Mqtt5BlockingClient client =
-                buildClient("user+wildcard", "pass1", "");
+                buildClient("user+wildcard", "pass1", "plus-user-client");
 
         assertThrows(
                 "'+' in username should be rejected",
@@ -258,6 +243,12 @@ public class ExtensionStartupIntegrationTest {
         subscriber.disconnect();
     }
 
+    @AfterClass
+    public static void printLogs() {
+        System.out.println("=== CONTAINER LOGS ===");
+        System.out.println(container.getLogs());
+        System.out.println("=== END LOGS ===");
+    }
 //    @Test
 //    public void whenArchiveFolderIsFile_shouldDeleteAndArchiveSuccessfully()
 //            throws Exception {

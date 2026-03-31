@@ -36,7 +36,6 @@ import java.io.File;
 public class FileAuthMain implements ExtensionMain {
 
     private static final @NotNull Logger log = LoggerFactory.getLogger(FileAuthMain.class);
-    private Configuration configuration;
 
     @Override
     public void extensionStart(final @NotNull ExtensionStartInput extensionStartInput, final @NotNull ExtensionStartOutput extensionStartOutput) {
@@ -48,7 +47,7 @@ public class FileAuthMain implements ExtensionMain {
 
             final ExtensionConfiguration extensionConfiguration = new ExtensionConfiguration(extensionHomeFolder);
 
-            this.configuration = new Configuration(extensionHomeFolder, Services.extensionExecutorService(),
+            final Configuration configuration = new Configuration(extensionHomeFolder, Services.extensionExecutorService(),
                     extensionConfiguration.getExtensionConfig());
             configuration.init();
 
@@ -69,9 +68,7 @@ public class FileAuthMain implements ExtensionMain {
 
     @Override
     public void extensionStop(final @NotNull ExtensionStopInput extensionStopInput, final @NotNull ExtensionStopOutput extensionStopOutput) {
-        if (this.configuration != null) {
-            log.info("File RBAC extension stopped. Thread tasks cancelled.");
-        }
+        // no resource cleanup needed
     }
 
 }

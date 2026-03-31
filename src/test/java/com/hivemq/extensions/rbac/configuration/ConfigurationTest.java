@@ -18,6 +18,7 @@
 package com.hivemq.extensions.rbac.configuration;
 
 import com.hivemq.extensions.rbac.configuration.entities.ExtensionConfig;
+import com.hivemq.extensions.rbac.configuration.entities.PasswordType;
 import com.hivemq.extension.sdk.api.annotations.NotNull;
 import com.hivemq.extension.sdk.api.annotations.Nullable;
 import com.hivemq.extensions.rbac.configuration.entities.FileAuthConfig;
@@ -35,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.Assert.*;
 
@@ -50,6 +52,7 @@ public class ConfigurationTest {
 
         final ExtensionConfig extensionConfig = new ExtensionConfig();
         extensionConfig.setReloadInterval(1);
+        extensionConfig.setPasswordType(PasswordType.PLAIN);
         final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         final Configuration configuration = new Configuration(temporaryFolder.getRoot(), scheduledExecutorService,
                 extensionConfig);
@@ -123,6 +126,51 @@ public class ConfigurationTest {
         configuration.init();
 
         assertNotNull(configuration.getCurrentConfig());
+
+        scheduledExecutorService.shutdown();
+    }
+
+    @Test
+    public void test_reload_callback_receives_distinct_old_and_new_configs() throws Exception {
+        final ExtensionConfig extensionConfig = new ExtensionConfig();
+        extensionConfig.setReloadInterval(1);
+        extensionConfig.setPasswordType(PasswordType.PLAIN);
+        final ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        final Configuration configuration = new Configuration(temporaryFolder.getRoot(), scheduledExecutorService, extensionConfig);
+
+        createCredentialsConfig();
+        configuration.init();
+
+        final AtomicReference<FileAuthConfig> oldConfigRef = new AtomicReference<>();
+        final AtomicReference<FileAuthConfig> newConfigRef = new AtomicReference<>();
+        final CountDownLatch latch = new CountDownLatch(1);
+        configuration.addReloadCallback((oldConfig, newConfig) -> {
+            oldConfigRef.set(oldConfig);
+            newConfigRef.set(newConfig);
+            latch.countDown();
+        });
+
+        final File configFile = new File(temporaryFolder.getRoot(), Configuration.CONFIG_NAME);
+        Files.writeString(configFile.toPath(), "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
+                "<file-rbac>\n" +
+                "  <users>\n" +
+                "    <user>\n" +
+                "      <name>reloaded-user</name>\n" +
+                "      <password>pw</password>\n" +
+                "      <roles><id>role1</id></roles>\n" +
+                "    </user>\n" +
+                "  </users>\n" +
+                "  <roles>\n" +
+                "    <role>\n" +
+                "      <id>role1</id>\n" +
+                "      <permissions><permission><topic>data/#</topic></permission></permissions>\n" +
+                "    </role>\n" +
+                "  </roles>\n" +
+                "</file-rbac>");
+
+        assertTrue(latch.await(30, TimeUnit.SECONDS));
+        assertNotNull(newConfigRef.get());
+        assertNotSame("Callback must not receive identical old/new config references", oldConfigRef.get(), newConfigRef.get());
 
         scheduledExecutorService.shutdown();
     }

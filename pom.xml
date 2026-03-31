@@ -14,6 +14,7 @@
         <asciidoctor.version>2.2.4</asciidoctor.version>
         <output.dir>${basedir}</output.dir>
         <source.document.name>README.adoc</source.document.name>
+        <hivemq.test.image>hivemq/hivemq-ce:latest</hivemq.test.image>
     </properties>
 
     <dependencies>
@@ -168,6 +169,12 @@
                         <exclude>**/*ExtensionIntegrationTestPlain.java</exclude>
                         <exclude>**/OldConfigCallbackTest.java</exclude>
                         <exclude>**/InvalidPasswordTest.java</exclude>
+                        <exclude>com.hivemq:hivemq-extension-sdk</exclude>  <!-- provided by HiveMQ -->
+                        <exclude>org.slf4j:*</exclude>                       <!-- provided by HiveMQ -->
+                        <exclude>ch.qos.logback:*</exclude>                  <!-- provided by HiveMQ -->
+                        <exclude>javax.servlet:*</exclude>
+                        <exclude>com.codahale.metrics:*</exclude>
+                        <exclude>module-info.class</exclude>
                     </excludes>
                     <argLine>
                         --add-opens java.base/java.lang=ALL-UNNAMED
@@ -185,8 +192,12 @@
                 <version>3.1.2</version>
                 <configuration>
                     <includes>
-                        <include>**/e2e/**</include>
+                        <include>**/e2e/*Test.java</include>
+                        <include>**/e2e/*IntegrationTest.java</include>
                     </includes>
+                    <systemPropertyVariables>
+                        <hivemq.test.image>${hivemq.test.image}</hivemq.test.image>
+                    </systemPropertyVariables>
                     <argLine>
                         --add-opens java.base/java.lang=ALL-UNNAMED
                         --add-opens java.base/java.io=ALL-UNNAMED
@@ -204,48 +215,17 @@
                     </execution>
                 </executions>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.1.1</version>
+                <artifactId>maven-jar-plugin</artifactId>
                 <executions>
                     <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <artifactSet>
-                                <excludes>
-                                    <exclude>com.hivemq:hivemq-extension-sdk</exclude>
-                                    <exclude>org.slf4j:*</exclude>
-                                    <exclude>ch.qos.logback:*</exclude>
-                                    <exclude>javax.servlet:*</exclude>
-                                    <exclude>com.codahale.metrics:*</exclude>
-                                </excludes>
-                            </artifactSet>
-                            <filters>
-                                <filter>
-                                    <artifact>*:*</artifact>
-                                    <excludes>
-                                        <exclude>META-INF/*.SF</exclude>
-                                        <exclude>META-INF/*.DSA</exclude>
-                                        <exclude>META-INF/*.RSA</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                            <transformers>
-                                <!-- FIX 3: merge JAXB SPI entries so JAXBContext.newInstance() works in shaded jar -->
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.hivemq.extensions.rbac.generator.PasswordGenerator</mainClass>
-                                </transformer>
-                            </transformers>
-                        </configuration>
+                        <id>default-jar</id>
+                        <phase>prepare-package</phase>  <!-- ← was package (default) -->
                     </execution>
                 </executions>
             </plugin>
+
         </plugins>
     </build>
 
@@ -283,7 +263,49 @@
                             </execution>
                         </executions>
                     </plugin>
-
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.1.1</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <shadedArtifactAttached>false</shadedArtifactAttached>
+                                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                                    <artifactSet>
+                                        <excludes>
+                                            <exclude>com.hivemq:hivemq-extension-sdk</exclude>
+                                            <exclude>org.slf4j:*</exclude>
+                                            <exclude>ch.qos.logback:*</exclude>
+                                            <exclude>javax.servlet:*</exclude>
+                                            <exclude>com.codahale.metrics:*</exclude>
+                                        </excludes>
+                                    </artifactSet>
+                                    <filters>
+                                        <filter>
+                                            <artifact>*:*</artifact>
+                                            <excludes>
+                                                <exclude>META-INF/*.SF</exclude>
+                                                <exclude>META-INF/*.DSA</exclude>
+                                                <exclude>META-INF/*.RSA</exclude>
+                                            </excludes>
+                                        </filter>
+                                    </filters>
+                                    <transformers>
+                                        <!-- FIX 3: merge JAXB SPI entries so JAXBContext.newInstance() works in shaded jar -->
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>com.hivemq.extensions.rbac.generator.PasswordGenerator</mainClass>
+                                        </transformer>
+                                    </transformers>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
                     <!-- FIX 1: assembly declared BEFORE antrun so ZIP exists when antrun tries to unzip it -->
                     <plugin>
                         <artifactId>maven-assembly-plugin</artifactId>
@@ -387,6 +409,50 @@
                         </executions>
                     </plugin>
 
+                    <!-- Ensure extension jar is shaded when only e2e profile is active -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <version>3.1.1</version>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>shade</goal>
+                                </goals>
+                                <configuration>
+                                    <shadedArtifactAttached>false</shadedArtifactAttached>
+                                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                                    <artifactSet>
+                                        <excludes>
+                                            <exclude>com.hivemq:hivemq-extension-sdk</exclude>
+                                            <exclude>org.slf4j:*</exclude>
+                                            <exclude>ch.qos.logback:*</exclude>
+                                            <exclude>javax.servlet:*</exclude>
+                                            <exclude>com.codahale.metrics:*</exclude>
+                                        </excludes>
+                                    </artifactSet>
+                                    <filters>
+                                        <filter>
+                                            <artifact>*:*</artifact>
+                                            <excludes>
+                                                <exclude>META-INF/*.SF</exclude>
+                                                <exclude>META-INF/*.DSA</exclude>
+                                                <exclude>META-INF/*.RSA</exclude>
+                                            </excludes>
+                                        </filter>
+                                    </filters>
+                                    <transformers>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                            <mainClass>com.hivemq.extensions.rbac.generator.PasswordGenerator</mainClass>
+                                        </transformer>
+                                    </transformers>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
                     <!-- FIX 1 (e2e profile): assembly before antrun -->
                     <plugin>
                         <artifactId>maven-assembly-plugin</artifactId>
@@ -448,8 +514,12 @@
                         <version>3.1.2</version>
                         <configuration>
                             <includes>
-                                <include>**/e2e/**</include>
+                                <include>**/e2e/*Test.java</include>
+                                <include>**/e2e/*IntegrationTest.java</include>
                             </includes>
+                            <systemPropertyVariables>
+                                <hivemq.test.image>${hivemq.test.image}</hivemq.test.image>
+                            </systemPropertyVariables>
                             <!-- FIX 4: add argLine so JDK 11 module access works in CI -->
                             <argLine>
                                 --add-opens java.base/java.lang=ALL-UNNAMED

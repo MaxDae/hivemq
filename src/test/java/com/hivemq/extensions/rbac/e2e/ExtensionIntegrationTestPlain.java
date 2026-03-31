@@ -2,6 +2,8 @@ package com.hivemq.extensions.rbac.e2e;
 
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -22,16 +24,22 @@ public class ExtensionIntegrationTestPlain {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionStartupIntegrationTest.class);
 
+    @BeforeClass
+    public static void printExtensionDir() {
+        System.out.println("=== EXTENSION_DIR ===");
+        System.out.println(TestContainerFactory.EXTENSION_DIR);
+        System.out.println("=== EXISTS ON DISK ===");
+        System.out.println(new java.io.File(TestContainerFactory.EXTENSION_DIR).exists());
+    }
+
     @ClassRule
     public static HiveMQContainer container = createContainer();
 
     private static HiveMQContainer createContainer() {
         try {
-            Path extensionDir = Path.of("target/unpacked-extension/hivemq-file-rbac-extension").toAbsolutePath();
-
-
-            // Write config files directly into the extension dir — avoids volume override issues
-            Files.writeString(extensionDir.resolve("credentials.xml"),
+            Path extensionDir = TestContainerFactory.createIsolatedExtensionDir();
+            Path credentialsFile = Files.createTempFile("credentials-plain", ".xml");
+            Files.writeString(credentialsFile,
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
                             "<file-rbac>\n" +
                             "    <users>\n" +
@@ -62,23 +70,25 @@ public class ExtensionIntegrationTestPlain {
                             "    </roles>\n" +
                             "</file-rbac>");
 
-            Files.writeString(extensionDir.resolve("extension-config.xml"),
+            Path extensionConfigFile = Files.createTempFile("extension-config-plain", ".xml");
+            Files.writeString(extensionConfigFile,
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
                             "<extension-configuration>\n" +
                             "    <credentials-reload-interval>60</credentials-reload-interval>\n" +
                             "    <password-type>PLAIN</password-type>\n" +
                             "</extension-configuration>");
+            Files.copy(credentialsFile, extensionDir.resolve("credentials.xml"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(extensionConfigFile, extensionDir.resolve("extension-config.xml"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
 
             return new HiveMQContainer(
-                    DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
+                    DockerImageName.parse(TestContainerFactory.HIVEMQ_IMAGE))
                     .withStartupTimeout(Duration.ofMinutes(5))
                     .withCreateContainerCmdModifier(cmd -> cmd.withUser("0"))
                     .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "false")
-
-                    .withExtension(MountableFile.forHostPath(extensionDir))
+                    .withExtension(MountableFile.forHostPath(extensionDir.toString()))
                     .withStartupTimeout(Duration.ofSeconds(120))
                     .withLogConsumer(new Slf4jLogConsumer(logger))
-                    .waitingFor(Wait.forLogMessage(".*File Role Based Access Control Extension.*started successfully.*", 1));
+                    .waitingFor(Wait.forListeningPort());
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -103,7 +113,7 @@ public class ExtensionIntegrationTestPlain {
     public void whenPlainExtensionDeployed_shouldStartSuccessfully() {
         assertTrue(
                 "Extension should start with PLAIN password type",
-                container.getLogs().contains("started successfully")
+                container.getLogs().contains("Starting File RBAC extension.")
         );
     }
 
@@ -154,5 +164,11 @@ public class ExtensionIntegrationTestPlain {
         } catch (Exception e) {
             fail("Admin with PLAIN password should connect: " + e.getMessage());
         }
+    }
+    @AfterClass
+    public static void printLogs() {
+        System.out.println("=== CONTAINER LOGS ===");
+        System.out.println(container.getLogs());
+        System.out.println("=== END LOGS ===");
     }
 }

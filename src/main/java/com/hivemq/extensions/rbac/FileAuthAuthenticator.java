@@ -26,10 +26,12 @@ import com.hivemq.extension.sdk.api.packets.auth.DefaultAuthorizationBehaviour;
 import com.hivemq.extension.sdk.api.packets.connect.ConnackReasonCode;
 import com.hivemq.extensions.rbac.configuration.entities.ExtensionConfig;
 import com.hivemq.extensions.rbac.utils.CredentialsValidator;
+import com.hivemq.extension.sdk.api.client.parameter.Listener;
 
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public class FileAuthAuthenticator implements SimpleAuthenticator {
 
@@ -57,6 +59,11 @@ public class FileAuthAuthenticator implements SimpleAuthenticator {
             return;
         }
         final String userName = userNameOptional.get();
+
+        if (!isListenerAllowed(simpleAuthInput)) {
+            simpleAuthOutput.failAuthentication(ConnackReasonCode.NOT_AUTHORIZED, "Authentication failed because listener is not allowed");
+            return;
+        }
 
         //prevent clientIds with MQTT wildcard characters
         if (clientId.contains("#") || clientId.contains("+")) {
@@ -88,6 +95,15 @@ public class FileAuthAuthenticator implements SimpleAuthenticator {
         simpleAuthOutput.getDefaultPermissions().setDefaultBehaviour(DefaultAuthorizationBehaviour.DENY);
 
         simpleAuthOutput.authenticateSuccessfully();
+    }
+
+    private boolean isListenerAllowed(final @NotNull SimpleAuthInput simpleAuthInput) {
+        final Set<String> allowedListenerNames = extensionConfig.getListenerNames();
+        if (allowedListenerNames == null || allowedListenerNames.isEmpty()) {
+            return true;
+        }
+        final Optional<Listener> listenerOptional = simpleAuthInput.getConnectionInformation().getListener();
+        return listenerOptional.map(Listener::getName).filter(allowedListenerNames::contains).isPresent();
     }
 
 }

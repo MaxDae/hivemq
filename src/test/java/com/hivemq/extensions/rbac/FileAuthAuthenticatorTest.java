@@ -83,6 +83,25 @@ public class FileAuthAuthenticatorTest {
     }
 
     @Test
+    public void test_connect_with_plus_in_username() {
+        fileAuthAuthenticator.onConnect(new TestInput("client1", "client/+x", "pass1"), output);
+        verify(output).failAuthentication(ConnackReasonCode.BAD_USER_NAME_OR_PASSWORD, "The characters '#' and '+' are not allowed in the username");
+    }
+
+    @Test
+    public void test_connect_with_plus_in_client_id() {
+        fileAuthAuthenticator.onConnect(new TestInput("client+1", "user1", "pass1"), output);
+        verify(output).failAuthentication(ConnackReasonCode.CLIENT_IDENTIFIER_NOT_VALID, "The characters '#' and '+' are not allowed in the client identifier");
+    }
+
+    @Test
+    public void test_connect_on_disallowed_listener() {
+        when(extensionConfig.getListenerNames()).thenReturn(Set.of("allowed-listener"));
+        fileAuthAuthenticator.onConnect(new TestInput("client1", "user1", "pass1", "blocked-listener"), output);
+        verify(output).failAuthentication(ConnackReasonCode.NOT_AUTHORIZED, "Authentication failed because listener is not allowed");
+    }
+
+    @Test
     public void test_connect_with_wildcard_clientId() {
         fileAuthAuthenticator.onConnect(new TestInput("client1/#", "client", "pass1"), output);
         verify(output).failAuthentication(ConnackReasonCode.CLIENT_IDENTIFIER_NOT_VALID, "The characters '#' and '+' are not allowed in the client identifier");

@@ -2,9 +2,11 @@ package com.hivemq.extensions.rbac.e2e;
 
 import com.hivemq.client.mqtt.mqtt5.Mqtt5BlockingClient;
 import com.hivemq.client.mqtt.mqtt5.Mqtt5Client;
+import org.junit.AfterClass;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.testcontainers.containers.Container;
 import org.testcontainers.containers.output.Slf4jLogConsumer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.hivemq.HiveMQContainer;
@@ -37,24 +39,17 @@ public class InvalidPasswordTest {
 
     private static HiveMQContainer buildContainer(Path credentialsFile)
             throws Exception {
+        final Path extensionDir = TestContainerFactory.createIsolatedExtensionDir();
+        Files.copy(credentialsFile, extensionDir.resolve("credentials.xml"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(buildExtensionConfig(), extensionDir.resolve("extension-config.xml"), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         return new HiveMQContainer(
-                DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
+                DockerImageName.parse(TestContainerFactory.HIVEMQ_IMAGE))
                 .withStartupTimeout(Duration.ofMinutes(5))
                 .withCreateContainerCmdModifier(cmd -> cmd.withUser("0"))
                 .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "false")
-                .withExtension(MountableFile.forHostPath(
-                        "target/unpacked-extension/hivemq-file-rbac-extension"))
-//                .withoutPrepackagedExtensions()
-                .withFileInExtensionHomeFolder(
-                        MountableFile.forHostPath(credentialsFile),
-                        "hivemq-file-rbac-extension",
-                        "credentials.xml")
-                .withFileInExtensionHomeFolder(
-                        MountableFile.forHostPath(buildExtensionConfig()),
-                        "hivemq-file-rbac-extension",
-                        "extension-config.xml")
+                .withExtension(MountableFile.forHostPath(extensionDir.toString()))
                 .withLogConsumer(new Slf4jLogConsumer(logger))
-                .waitingFor(Wait.forLogMessage(".*File Role Based Access Control Extension.*started successfully.*", 1));
+                .waitingFor(Wait.forListeningPort());
     }
 
     // ─── Helper — builds credentials.xml ─────────────────────────────────────
@@ -102,7 +97,7 @@ public class InvalidPasswordTest {
     // ─── Test 1 — 2-part password logged as error ─────────────────────────────
 
     @Test
-    public void whenPasswordHasTwoParts_validatorShouldLogError()
+    public void whenPasswordHasTwoParts_shouldRejectAllConnections()
             throws Exception {
 
         // baduser has 2-part password — missing hash
@@ -113,17 +108,31 @@ public class InvalidPasswordTest {
 
         try (HiveMQContainer container = buildContainer(credentialsFile)) {
             container.start();
+            assertTrue("Container should be running", container.isRunning());
+            Container.ExecResult ls = container.execInContainer("ls", "-la", "/opt/hivemq/extensions/");
+            System.out.println("=== EXTENSIONS DIR ===");
+            System.out.println(ls.getStdout());
+            System.out.println(ls.getStderr());
 
-            // Before fix: validator accepts 2-part → no error logged ❌
-            // After fix:  validator rejects 2-part → error logged    ✅
-            String logs = container.getLogs();
+            // Also print the absolute path being used
+            System.out.println("=== HOST PATH ===");
+            System.out.println(
+                    Path.of("target/unpacked-extension/hivemq-file-rbac-extension")
+                            .toAbsolutePath()
+            );
 
-            assertTrue(
-                    "Validator should log error about invalid password format — " +
-                            "before fix: silent, no error ❌ " +
-                            "after fix: clear error in logs ✅",
-                    logs.contains("invalid password") ||
-                            logs.contains("has errors")
+            final Mqtt5BlockingClient goodClient = Mqtt5Client.builder()
+                    .serverHost(container.getHost())
+                    .serverPort(container.getMqttPort())
+                    .simpleAuth()
+                    .username("gooduser")
+                    .password("pass1".getBytes())
+                    .applySimpleAuth()
+                    .buildBlocking();
+            assertThrows(
+                    "Malformed HASHED config must be rejected and deny all connections",
+                    Exception.class,
+                    goodClient::connect
             );
         }
     }
@@ -141,6 +150,7 @@ public class InvalidPasswordTest {
 
         try (HiveMQContainer container = buildContainer(credentialsFile)) {
             container.start();
+            assertTrue("Container should be running", container.isRunning());
 
             Mqtt5BlockingClient badClient = Mqtt5Client.builder()
                     .serverHost(container.getHost())
@@ -166,7 +176,7 @@ public class InvalidPasswordTest {
     // ─── Test 4 — non-numeric iterations ─────────────────────────────────────
 
     @Test
-    public void whenIterationsNotNumeric_validatorShouldLogError()
+    public void whenIterationsNotNumeric_shouldRejectAllConnections()
             throws Exception {
 
         Path credentialsFile = buildCredentials(
@@ -176,18 +186,20 @@ public class InvalidPasswordTest {
 
         try (HiveMQContainer container = buildContainer(credentialsFile)) {
             container.start();
+            assertTrue("Container should be running", container.isRunning());
 
-            // Before fix: validator accepts → Integer.parseInt("abc") crashes ❌
-            // After fix:  validator rejects → clear error logged ✅
-            String logs = container.getLogs();
-
-            assertTrue(
-                    "Validator should log error about non-numeric iterations — " +
-                            "before fix: Integer.parseInt crashes silently ❌ " +
-                            "after fix: clear validation error ✅",
-                    logs.contains("invalid password") ||
-                            logs.contains("non-numeric") ||
-                            logs.contains("has errors")
+            final Mqtt5BlockingClient goodClient = Mqtt5Client.builder()
+                    .serverHost(container.getHost())
+                    .serverPort(container.getMqttPort())
+                    .simpleAuth()
+                    .username("gooduser")
+                    .password("pass1".getBytes())
+                    .applySimpleAuth()
+                    .buildBlocking();
+            assertThrows(
+                    "Non-numeric iterations in HASHED config must deny all connections",
+                    Exception.class,
+                    goodClient::connect
             );
         }
     }

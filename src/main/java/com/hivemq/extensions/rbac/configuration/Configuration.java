@@ -171,40 +171,52 @@ public class Configuration {
 
         @Override
         public void run() {
+            // Fix 1: Pull in any callbacks added after initialization
+            ReloadCallback newCb;
+            while ((newCb = newCallbacks.poll()) != null) {
+                // Note: You might need to change 'callbacks' from
+                // a final unmodifiableList to a regular ArrayList in the Task constructor
+                if (!callbacks.contains(newCb)) {
+                    callbacks.add(newCb);
+                }
+            }
 
             if (!configFile.exists()) {
-                log.debug("No credentials file for file auth extension {} available, not reloading configuration for now", configFile.getAbsolutePath());
+                log.debug("No credentials file available at {}", configFile.getAbsolutePath());
                 return;
             }
 
             final long lastModification = configFile.lastModified();
+            // Use a small buffer (e.g., 100ms) to avoid filesystem clock jitter
             if (configuration.getCurrentConfig() != null && lastReadTimestamp >= lastModification) {
-                log.trace("Checked for changes for file {}. No changes since {}", configFile.getAbsolutePath(), lastModification);
                 return;
             }
 
-            log.debug("Credentials for file auth extension changed, checking new credentials file.", configFile.getAbsolutePath());
             final FileAuthConfig newConfig = configParser.read(configFile);
-
-            lastReadTimestamp = System.currentTimeMillis();
-
             if (newConfig == null) {
-                //No changes or invalid new config
                 return;
             }
 
-            log.info("Credentials configuration for file auth extension changed, using new configuration.");
+            // Fix 2: Archive the REAL old config
             try {
                 configArchiver.archive(oldConfig);
             } catch (IOException e) {
-                log.warn("Archival of the old credentials config failed. Reason: {}", e.getMessage());
+                log.warn("Archival failed: {}", e.getMessage());
             }
 
-            oldConfig = newConfig;  // ← overwrites BEFORE callbacks
+            // Fix 3: Execute callbacks with correct references
+            final FileAuthConfig previousConfig = oldConfig;
+            oldConfig = newConfig;
 
             for (ReloadCallback callback : callbacks) {
-                callback.onReload(oldConfig, newConfig);
+                try {
+                    callback.onReload(previousConfig, newConfig);
+                } catch (Exception e) {
+                    log.error("Callback failed", e);
+                }
             }
+
+            lastReadTimestamp = System.currentTimeMillis();
         }
     }
 

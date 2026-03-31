@@ -72,7 +72,7 @@ public class ExtensionIntegrationTestPlain {
 
                     .withExtension(MountableFile.forHostPath(extensionDir))
                     .withStartupTimeout(Duration.ofSeconds(120))
-                    .waitingFor(Wait.forLogMessage(".*Extension \"File RBAC Extension\" started successfully.*\\n", 3));
+                    .waitingFor(Wait.forLogMessage(".*File Role Based Access Control Extension.*started successfully.*", 1));
 
         } catch (Exception e) {
             throw new RuntimeException(e);

@@ -33,17 +33,13 @@ jobs:
 
       - name: Pre-pull HiveMQ image
         run: docker pull hivemq/hivemq-ce:2025.5
-      - name: Run unit tests
-        run: mvn -B test -P '!Packaging' --file pom.xml
 
-      - name: Package extension          # ← unpacks the ZIP before E2E
-        run: mvn -B package --file pom.xml -DskipTests
-
+      # Single verify call runs the full lifecycle in correct order:
+      # compile → package (assembly creates ZIP) →
+      # pre-integration-test (antrun unpacks ZIP) →
+      # integration-test (failsafe runs E2E) → verify
       - name: Run E2E tests
-        run: mvn -B failsafe:integration-test failsafe:verify -Pe2e --file pom.xml
-
-#      - name: Run E2E tests
-#        run: mvn -B verify -Pe2e --file pom.xml
+        run: mvn -B verify -Pe2e --file pom.xml
 
       - name: Publish E2E test results
         uses: dorny/test-reporter@v1

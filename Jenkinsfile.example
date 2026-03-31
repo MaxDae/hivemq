@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    tools {
+        jdk 'jdk11'
+    }
+
+    options {
+        timestamps()
+    }
+
+    parameters {
+        string(name: 'HIVEMQ_TEST_IMAGE', defaultValue: 'hivemq/hivemq-ce:latest', description: 'HiveMQ Docker image used by E2E tests')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Unit Tests') {
+            steps {
+                sh "mvn -B test -P '!Packaging' --file pom.xml"
+            }
+            post {
+                always {
+                    junit testResults: '**/target/surefire-reports/*.xml', allowEmptyResults: true
+                }
+            }
+        }
+
+        stage('E2E Tests') {
+            steps {
+                sh 'docker pull "${HIVEMQ_TEST_IMAGE}"'
+                sh 'mvn -B verify -Pe2e -Dhivemq.test.image="${HIVEMQ_TEST_IMAGE}" --file pom.xml'
+            }
+            post {
+                always {
+                    junit testResults: '**/target/failsafe-reports/TEST-*.xml', allowEmptyResults: true
+                }
+            }
+        }
+    }
+}

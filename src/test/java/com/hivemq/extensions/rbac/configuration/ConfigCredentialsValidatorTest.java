@@ -353,7 +353,7 @@ public class ConfigCredentialsValidatorTest {
         config.setRoles(List.of(new Role("1", List.of(new Permission("topic")))));
 
         config.setUsers(List.of(
-                new User("user1", "pass1:pass2", List.of("1"))
+                new User("user1", "pass1:100:pass2", List.of("1"))
         ));
 
         final ExtensionConfig extensionConfig = new ExtensionConfig();
@@ -380,7 +380,7 @@ public class ConfigCredentialsValidatorTest {
         final ValidationResult result = ConfigCredentialsValidator.validateConfig(extensionConfig, config);
 
         assertFalse(result.isValidationSuccessful());
-        checkErrorString(result, "User 'user1' has invalid password");
+        checkErrorString(result, "User 'user1' has invalid password format — expected salt:iterations:hash");
     }
 
     @Test

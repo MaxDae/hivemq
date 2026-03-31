@@ -100,9 +100,6 @@ public class PaswordFormatValidatorTest {
                         configWithPassword("c29tZXNhbHQ=:abc:aGFzaA==") // ← abc
                 );
 
-        // Before fix: "abc" is not empty → passes ❌
-        //             Integer.parseInt("abc") crashes later
-        // After fix:  parseInt caught → fails with clear error ✅
         assertFalse(
                 "Non-numeric iterations should fail validation",
                 result.isValidationSuccessful()

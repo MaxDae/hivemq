@@ -1,8 +1,10 @@
 name: PR Unit Tests
 
-on:
+"on":
   pull_request:
-    branches: [ "master", "main" ]
+    branches:
+      - master
+      - main
   workflow_dispatch:
 
 jobs:

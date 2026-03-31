@@ -23,6 +23,7 @@ public class ExtensionIntegrationTestPlain {
         try {
             Path extensionDir = Path.of("target/unpacked-extension/hivemq-file-rbac-extension").toAbsolutePath();
 
+
             // Write config files directly into the extension dir — avoids volume override issues
             Files.writeString(extensionDir.resolve("credentials.xml"),
                     "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n" +
@@ -64,6 +65,7 @@ public class ExtensionIntegrationTestPlain {
 
             return new HiveMQContainer(
                     DockerImageName.parse("hivemq/hivemq-ce:2025.5"))
+                    .withEnv("HIVEMQ_ALLOW_ALL_CLIENTS", "true")
                     .withStartupTimeout(Duration.ofMinutes(5))// pin version!
                     .withExtension(MountableFile.forHostPath(extensionDir))
                     .withStartupTimeout(Duration.ofSeconds(120))

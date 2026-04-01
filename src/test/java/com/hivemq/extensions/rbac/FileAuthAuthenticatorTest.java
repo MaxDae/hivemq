@@ -102,6 +102,27 @@ public class FileAuthAuthenticatorTest {
     }
 
     @Test
+    public void test_connect_on_disallowed_listener_fails_fast_without_credentials_check() {
+        when(extensionConfig.getListenerNames()).thenReturn(Set.of("allowed-listener"));
+
+        fileAuthAuthenticator.onConnect(new TestInput("client1", "user1", "pass1", "blocked-listener"), output);
+
+        verify(output).failAuthentication(ConnackReasonCode.NOT_AUTHORIZED, "Authentication failed because listener is not allowed");
+        verify(credentialsValidator, never()).getRoles(anyString(), any());
+        verify(credentialsValidator, never()).getPermissions(anyString(), anyString(), anyList());
+    }
+
+    @Test
+    public void test_connect_on_allowed_listener_continues_authentication_flow() {
+        when(extensionConfig.getListenerNames()).thenReturn(Set.of("allowed-listener"));
+        when(credentialsValidator.getRoles(eq("user1"), any())).thenReturn(List.of("role1"));
+
+        fileAuthAuthenticator.onConnect(new TestInput("client1", "user1", "pass1", "allowed-listener"), output);
+
+        verify(output).authenticateSuccessfully();
+    }
+
+    @Test
     public void test_connect_with_wildcard_clientId() {
         fileAuthAuthenticator.onConnect(new TestInput("client1/#", "client", "pass1"), output);
         verify(output).failAuthentication(ConnackReasonCode.CLIENT_IDENTIFIER_NOT_VALID, "The characters '#' and '+' are not allowed in the client identifier");
@@ -177,6 +198,9 @@ public class FileAuthAuthenticatorTest {
 
         @Override
         public @NotNull Optional<Listener> getListener() {
+            if (listenerName == null) {
+                return Optional.empty();
+            }
             return Optional.of(new Listener() {
                 @Override
                 public int getPort() {

@@ -4,9 +4,9 @@ name: E2E Tests (Manual)
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch to run E2E tests on'
-        required: true
-        default: 'main'
+        description: 'Branch to run E2E tests on (leave empty to use repository default branch)'
+        required: false
+        default: 'master'
       hivemq_image:
         description: 'HiveMQ Docker image for E2E tests'
         type: choice
@@ -26,7 +26,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.branch }}
+          ref: ${{ github.event.inputs.branch != '' && github.event.inputs.branch || github.event.repository.default_branch }}
 
       - name: Set up JDK 11
         uses: actions/setup-java@v4
@@ -55,6 +55,6 @@ jobs:
         uses: dorny/test-reporter@v1
         if: always()
         with:
-          name: Maven E2E Test Results (${{ github.event.inputs.branch }}, ${{ env.HIVEMQ_TEST_IMAGE }})
+          name: Maven E2E Test Results (${{ github.event.inputs.branch != '' && github.event.inputs.branch || github.event.repository.default_branch }}, ${{ env.HIVEMQ_TEST_IMAGE }})
           path: '**/target/failsafe-reports/TEST-*.xml'
           reporter: java-junit

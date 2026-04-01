@@ -174,4 +174,59 @@ public class CredentialsValidatorConcurrencyTest {
                 npeCount.get()
         );
     }
+
+    @Test
+    public void test_getPermissions_during_reload_should_not_throw() throws Exception {
+        final FileAuthConfig configA = buildConfig("user1", "pass1", "role1");
+        final FileAuthConfig configB = buildConfig("user2", "pass2", "role2");
+
+        final int iterations = 5000;
+        final AtomicReference<Throwable> failure = new AtomicReference<>();
+        final AtomicInteger npeCount = new AtomicInteger(0);
+        final ExecutorService executor = Executors.newFixedThreadPool(2);
+        final CountDownLatch startLatch = new CountDownLatch(1);
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                for (int i = 0; i < iterations; i++) {
+                    reloadCallback.onReload(null, (i % 2 == 0) ? configA : configB);
+                }
+            } catch (Throwable t) {
+                failure.compareAndSet(null, t);
+            }
+        });
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                for (int i = 0; i < iterations; i++) {
+                    try {
+                        validator.getPermissions("client-" + i, "user-" + i, List.of("role1", "role2"));
+                    } catch (NullPointerException npe) {
+                        npeCount.incrementAndGet();
+                        failure.compareAndSet(null, npe);
+                    } catch (RuntimeException runtimeException) {
+                        // Known test-environment limitation: HiveMQ Builders requires extension classloader.
+                        final String message = runtimeException.getMessage();
+                        if (message == null || !message.contains("Static class Builders cannot be called")) {
+                            failure.compareAndSet(null, runtimeException);
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                failure.compareAndSet(null, t);
+            }
+        });
+
+        startLatch.countDown();
+        executor.shutdown();
+        assertTrue("Executor did not terminate in time", executor.awaitTermination(30, TimeUnit.SECONDS));
+
+        assertEquals("No NullPointerException expected while reading permissions during reload", 0, npeCount.get());
+
+        if (failure.get() != null) {
+            fail("No exception expected while reading permissions during reload, but got: " + failure.get());
+        }
+    }
 }
